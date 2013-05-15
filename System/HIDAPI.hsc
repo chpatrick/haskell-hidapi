@@ -100,19 +100,23 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_enumerate"
 foreign import ccall unsafe "hidapi/hidapi.h hid_free_enumeration"
   hid_free_enumeration :: Ptr DeviceInfoInternal -> IO ()
 
-enumerate :: Maybe Word16 -> Maybe Word16 -> IO [ DeviceInfo ]
+enumerate :: Maybe Word16 -> Maybe Word16 -> IO (Maybe [ DeviceInfo ])
 enumerate vendorId productId = do
 	dip <- hid_enumerate (maybe 0 fromIntegral vendorId) (maybe 0 fromIntegral productId)
-	let parse dip = do
-		idi <- peek dip
-		di <- fromInternalDeviceInfo idi
-		dis <- if _next idi == nullPtr
-			then return []
-			else parse (_next idi)
-		return (di : dis)
-	dis <- parse dip
-	hid_free_enumeration dip
-	return dis
+	if dip /= nullPtr
+		then do
+			let parse dip = do
+				idi <- peek dip
+				di <- fromInternalDeviceInfo idi
+				dis <- if _next idi == nullPtr
+					then return []
+					else parse (_next idi)
+				return (di : dis)
+			dis <- parse dip
+			hid_free_enumeration dip
+			return (Just dis)
+		else
+			return Nothing
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_open"
 	hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
@@ -134,6 +138,10 @@ openPath p = do
 	dp <- withCString p hid_open_path
 	return $ if dp == nullPtr then Nothing else Just (Device dp)
 
+openDeviceInfo :: DeviceInfo -> IO (Maybe Device)
+openDeviceInfo DeviceInfo { vendorId = vid, productId = pid }
+  = open vid pid Nothing
+
 foreign import ccall unsafe "hidapi/hidapi.h hid_close"
 	close :: Device -> IO ()
 
@@ -146,3 +154,14 @@ read d n = allocaBytes n $ \b -> do
   if n /= -1
   	then Just <$> packCStringLen ( b, fromIntegral n' )
   	else return Nothing
+
+foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
+	hid_get_serial_number_string :: Device -> CWString -> CSize -> IO CInt
+
+getSerialNumberString :: Device -> Int -> IO (Maybe String)
+getSerialNumberString d l = do
+	allocaBytes	(l * sizeOf (undefined :: CWchar)) $ \b -> do
+	n' <- hid_get_serial_number_string d b (fromIntegral l)
+	if n' /= -1
+		then Just <$> peekCWString b
+		else return Nothing
