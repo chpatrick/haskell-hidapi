@@ -2,13 +2,21 @@
 
 #include "hidapi/hidapi.h"
 
-module System.HIDAPI(System.HIDAPI.init) where
+module System.HIDAPI
+  ( System.HIDAPI.init
+  , exit
+  , enumerate
+  , open
+  , close
+  ) where
 
 import Control.Applicative
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String
 import Foreign.Ptr
+
+newtype Device = Device (Ptr ())
 
 data DeviceInfoInternal = DeviceInfoInternal
   { _path :: CString
@@ -78,6 +86,12 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_init"
 init :: IO Bool
 init = (==0) <$> hid_init
 
+foreign import ccall unsafe "hidapi/hidapi.h hid_exit"
+  hid_exit :: IO CInt
+
+exit :: IO Bool
+exit = (==0) <$> hid_exit
+
 foreign import ccall unsafe "hidapi/hidapi.h hid_enumerate"
   hid_enumerate :: CUShort -> CUShort -> IO (Ptr DeviceInfoInternal)
 
@@ -97,3 +111,18 @@ enumerate vendorId productId = do
 	dis <- parse dip
 	hid_free_enumeration dip
 	return dis
+
+foreign import ccall unsafe "hidapi/hidapi.h hid_open"
+	hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
+
+open :: Word16 -> Word16 -> Maybe String -> IO (Maybe Device)
+open vendorId productId serialNumber = do
+  let vid = fromIntegral vendorId
+  let pid = fromIntegral productId
+  dp <- case serialNumber of
+  	Nothing -> hid_open vid pid nullPtr
+  	Just sn -> withCWString sn (hid_open vid pid)
+  return $ if dp == nullPtr then Nothing else Just (Device dp)
+
+foreign import ccall unsafe "hidapi/hidapi.h hid_close"
+	close :: Device -> IO ()
