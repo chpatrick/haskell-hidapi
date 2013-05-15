@@ -1,0 +1,9 @@
+name:              hidapi
+version:           1.0
+build-type:        Simple
+cabal-version:     >= 1.2
+
+library
+  exposed-modules: System.HIDAPI
+  build-depends:   base
+  extra-libraries: hidapi-libusb
