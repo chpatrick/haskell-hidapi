@@ -11,9 +11,11 @@ module System.HIDAPI
   ) where
 
 import Control.Applicative
+import Data.ByteString
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String
+import Foreign.Marshal
 import Foreign.Ptr
 
 newtype Device = Device (Ptr ())
@@ -124,5 +126,23 @@ open vendorId productId serialNumber = do
   	Just sn -> withCWString sn (hid_open vid pid)
   return $ if dp == nullPtr then Nothing else Just (Device dp)
 
+foreign import ccall unsafe "hidapi/hidapi.h hid_open_path"
+	hid_open_path :: CString -> IO (Ptr ())
+
+openPath :: String -> IO (Maybe Device)
+openPath p = do
+	dp <- withCString p hid_open_path
+	return $ if dp == nullPtr then Nothing else Just (Device dp)
+
 foreign import ccall unsafe "hidapi/hidapi.h hid_close"
 	close :: Device -> IO ()
+
+foreign import ccall unsafe "hidapi/hidapi.h hid_read"
+	hid_read :: Device -> Ptr CChar -> CSize -> IO CInt
+
+read :: Device -> Int -> IO (Maybe ByteString)
+read d n = allocaBytes n $ \b -> do
+  n' <- hid_read d b (fromIntegral n)
+  if n /= -1
+  	then Just <$> packCStringLen ( b, fromIntegral n' )
+  	else return Nothing
