@@ -5,6 +5,7 @@
 
 import Control.Monad.Error
 import Control.Monad.Trans
+import Data.Int
 import qualified Data.ByteString as BS
 import System.HIDAPI as HID
 
@@ -15,6 +16,6 @@ main = runErrorT $ do
 	forever $ do
 		bs <- ErrorT $ HID.read d 6
 		liftIO $ do
-			putStr (show (BS.index bs 1))
+			putStr (show (fromIntegral (BS.index bs 1) :: Int8))
 			putChar ' '
-			print (BS.index bs 2)
+			print (fromIntegral (BS.index bs 2) :: Int8)
