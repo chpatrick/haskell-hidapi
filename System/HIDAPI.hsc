@@ -24,16 +24,16 @@ newtype Device = Device (Ptr ())
 
 data DeviceInfoInternal = DeviceInfoInternal
   { _path :: CString
-	, _vendorId :: CUShort
-	, _productId :: CUShort
-	, _serialNumber :: CWString
-	, _releaseNumber :: CUShort
-	, _manufacturerString :: CWString
-	, _productString :: CWString
-	, _usagePage :: CUShort
-	, _usage :: CUShort
-	, _interfaceNumber :: CInt
-	, _next :: Ptr DeviceInfoInternal
+  , _vendorId :: CUShort
+  , _productId :: CUShort
+  , _serialNumber :: CWString
+  , _releaseNumber :: CUShort
+  , _manufacturerString :: CWString
+  , _productString :: CWString
+  , _usagePage :: CUShort
+  , _usage :: CUShort
+  , _interfaceNumber :: CInt
+  , _next :: Ptr DeviceInfoInternal
   } deriving (Show)
 
 #let alignment t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
@@ -56,15 +56,15 @@ instance Storable DeviceInfoInternal where
 
 data DeviceInfo = DeviceInfo
   { path :: String
-	, vendorId :: Word16
-	, productId :: Word16
-	, serialNumber :: Maybe String
-	, releaseNumber :: Word16
-	, manufacturerString :: Maybe String
-	, productString :: Maybe String
-	, usagePage :: Word16
-	, usage :: Word16
-	, interfaceNumber :: Int
+  , vendorId :: Word16
+  , productId :: Word16
+  , serialNumber :: Maybe String
+  , releaseNumber :: Word16
+  , manufacturerString :: Maybe String
+  , productString :: Maybe String
+  , usagePage :: Word16
+  , usage :: Word16
+  , interfaceNumber :: Int
   } deriving (Show)
 
 peekOptString p
@@ -104,69 +104,67 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_free_enumeration"
 
 enumerate :: Maybe Word16 -> Maybe Word16 -> IO [ DeviceInfo ]
 enumerate vendorId productId = do
-	dip <- hid_enumerate (maybe 0 fromIntegral vendorId) (maybe 0 fromIntegral productId)
-	let parse dip = if dip == nullPtr
-		then return []
-		else do
-			idi <- peek dip
-			di <- fromInternalDeviceInfo idi
-			dis <- parse (_next idi)
-			return (di : dis)
-	dis <- parse dip
-	hid_free_enumeration dip
-	return dis
+  dip <- hid_enumerate (maybe 0 fromIntegral vendorId) (maybe 0 fromIntegral productId)
+  let parse dip = if dip == nullPtr then return [] else do
+                  idi <- peek dip
+                  di <- fromInternalDeviceInfo idi
+                  dis <- parse (_next idi)
+                  return (di : dis)
+  dis <- parse dip
+  hid_free_enumeration dip
+  return dis
 
 enumerateAll :: IO [ DeviceInfo ]
 enumerateAll = enumerate Nothing Nothing
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_open"
-	hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
+  hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
 
 open :: Word16 -> Word16 -> Maybe String -> IO (Maybe Device)
 open vendorId productId serialNumber = do
   let vid = fromIntegral vendorId
   let pid = fromIntegral productId
   dp <- case serialNumber of
-  	Nothing -> hid_open vid pid nullPtr
-  	Just sn -> withCWString sn (hid_open vid pid)
+    Nothing -> hid_open vid pid nullPtr
+    Just sn -> withCWString sn (hid_open vid pid)
   return $ if dp == nullPtr then Nothing else Just (Device dp)
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_open_path"
-	hid_open_path :: CString -> IO (Ptr ())
+  hid_open_path :: CString -> IO (Ptr ())
 
 openPath :: String -> IO (Maybe Device)
 openPath p = do
-	dp <- withCString p hid_open_path
-	return $ if dp == nullPtr then Nothing else Just (Device dp)
+  dp <- withCString p hid_open_path
+  return $ if dp == nullPtr then Nothing else Just (Device dp)
 
 openDeviceInfo :: DeviceInfo -> IO (Maybe Device)
 openDeviceInfo DeviceInfo { vendorId = vid, productId = pid }
   = open vid pid Nothing
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_close"
-	close :: Device -> IO ()
+  close :: Device -> IO ()
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_read"
-	hid_read :: Device -> Ptr CChar -> CSize -> IO CInt
+  hid_read :: Device -> Ptr CChar -> CSize -> IO CInt
 
 read :: Device -> Int -> IO (Maybe ByteString)
 read d n = allocaBytes n $ \b -> do
   n' <- hid_read d b (fromIntegral n)
   if n' /= -1
-  	then Just <$> packCStringLen ( b, fromIntegral n' )
-  	else return Nothing
+    then Just <$> packCStringLen ( b, fromIntegral n' )
+    else return Nothing
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
-	hid_get_serial_number_string :: Device -> CWString -> CSize -> IO CInt
+  hid_get_serial_number_string :: Device -> CWString -> CSize -> IO CInt
 
 _SERIAL_NUMBER_MAX_LENGTH = 32768
 
 getSerialNumberString :: Device -> IO (Maybe String)
 getSerialNumberString d = do
-	b <- mallocBytes (_SERIAL_NUMBER_MAX_LENGTH * sizeOf (undefined :: CWchar))
-	n' <- hid_get_serial_number_string d b (fromIntegral _SERIAL_NUMBER_MAX_LENGTH)
-	r <- if n' /= -1
-		then Just <$> peekCWString b
-		else return Nothing
-	free b
-	return r
+  b <- mallocBytes (_SERIAL_NUMBER_MAX_LENGTH * sizeOf (undefined :: CWchar))
+  n' <- hid_get_serial_number_string d b (fromIntegral _SERIAL_NUMBER_MAX_LENGTH)
+  r <- if n' /= -1
+    then Just <$> peekCWString b
+    else return Nothing
+  free b
+  return r
