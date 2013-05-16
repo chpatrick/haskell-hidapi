@@ -8,6 +8,8 @@ module System.HIDAPI
   , enumerate
   , open
   , close
+  , System.HIDAPI.read
+  , getSerialNumberString
   ) where
 
 import Control.Applicative
@@ -158,10 +160,14 @@ read d n = allocaBytes n $ \b -> do
 foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
 	hid_get_serial_number_string :: Device -> CWString -> CSize -> IO CInt
 
-getSerialNumberString :: Device -> Int -> IO (Maybe String)
-getSerialNumberString d l = do
-	allocaBytes	(l * sizeOf (undefined :: CWchar)) $ \b -> do
-	n' <- hid_get_serial_number_string d b (fromIntegral l)
-	if n' /= -1
+_SERIAL_NUMBER_MAX_LENGTH = 32768
+
+getSerialNumberString :: Device -> IO (Maybe String)
+getSerialNumberString d = do
+	b <- mallocBytes (_SERIAL_NUMBER_MAX_LENGTH * sizeOf (undefined :: CWchar))
+	n' <- hid_get_serial_number_string d b (fromIntegral _SERIAL_NUMBER_MAX_LENGTH)
+	r <- if n' /= -1
 		then Just <$> peekCWString b
 		else return Nothing
+	free b
+	return r
