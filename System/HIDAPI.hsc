@@ -21,7 +21,6 @@ import Foreign.C.Types
 import Foreign.C.String
 import Foreign.Marshal
 import Foreign.Ptr
-import Prelude
 
 newtype Device = Device (Ptr ())
 
