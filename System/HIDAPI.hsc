@@ -102,23 +102,22 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_enumerate"
 foreign import ccall unsafe "hidapi/hidapi.h hid_free_enumeration"
   hid_free_enumeration :: Ptr DeviceInfoInternal -> IO ()
 
-enumerate :: Maybe Word16 -> Maybe Word16 -> IO (Maybe [ DeviceInfo ])
+enumerate :: Maybe Word16 -> Maybe Word16 -> IO [ DeviceInfo ]
 enumerate vendorId productId = do
 	dip <- hid_enumerate (maybe 0 fromIntegral vendorId) (maybe 0 fromIntegral productId)
-	if dip /= nullPtr
-		then do
-			let parse dip = do
-				idi <- peek dip
-				di <- fromInternalDeviceInfo idi
-				dis <- if _next idi == nullPtr
-					then return []
-					else parse (_next idi)
-				return (di : dis)
-			dis <- parse dip
-			hid_free_enumeration dip
-			return (Just dis)
-		else
-			return Nothing
+	let parse dip = if dip == nullPtr
+		then return []
+		else do
+			idi <- peek dip
+			di <- fromInternalDeviceInfo idi
+			dis <- parse (_next idi)
+			return (di : dis)
+	dis <- parse dip
+	hid_free_enumeration dip
+	return dis
+
+enumerateAll :: IO [ DeviceInfo ]
+enumerateAll = enumerate Nothing Nothing
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_open"
 	hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
@@ -153,7 +152,7 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_read"
 read :: Device -> Int -> IO (Maybe ByteString)
 read d n = allocaBytes n $ \b -> do
   n' <- hid_read d b (fromIntegral n)
-  if n /= -1
+  if n' /= -1
   	then Just <$> packCStringLen ( b, fromIntegral n' )
   	else return Nothing
 
