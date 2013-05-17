@@ -9,13 +9,11 @@ import Data.Int
 import qualified Data.ByteString as BS
 import System.HIDAPI as HID
 
-main = runErrorT $ do
-	ErrorT HID.init
-	( di : dis ) <- ErrorT enumerateAll
-	d <- ErrorT $ openDeviceInfo di
-	forever $ do
-		bs <- ErrorT $ HID.read d 6
-		liftIO $ do
-			putStr (show (fromIntegral (BS.index bs 1) :: Int8))
-			putChar ' '
-			print (fromIntegral (BS.index bs 2) :: Int8)
+main = withHIDAPI $ do
+  ( di : dis ) <- enumerateAll
+  d <- openDeviceInfo di
+  forever $ do
+    bs <- HID.read d 6
+    putStr (show (fromIntegral (BS.index bs 1) :: Int8))
+    putChar ' '
+    print (fromIntegral (BS.index bs 2) :: Int8)
