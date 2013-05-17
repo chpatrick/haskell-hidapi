@@ -6,4 +6,4 @@ cabal-version:     >= 1.2
 library
   exposed-modules: System.HIDAPI
   build-depends:   base
-  extra-libraries: hidapi-libusb
+  extra-libraries: hidapi-hidraw
