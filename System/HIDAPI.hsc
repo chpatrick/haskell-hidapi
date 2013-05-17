@@ -115,7 +115,7 @@ error = do
 check :: Bool -> String -> IO ()
 check c m = unless c $ do
   e <- fromMaybe "Unknown error" <$> System.HIDAPI.error
-  throw $ HIDAPIException m e
+  throwIO $ HIDAPIException m e
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_init"
   hid_init :: IO CInt
@@ -159,7 +159,7 @@ enumerate vendorId productId = do
       e <- System.HIDAPI.error
       case e of
         Nothing -> return []
-        Just err -> throw (HIDAPIException "Device enumeration failed" err)
+        Just err -> throwIO (HIDAPIException "Device enumeration failed" err)
     else do
       dis <- parseEnumeration dip
       hid_free_enumeration dip
