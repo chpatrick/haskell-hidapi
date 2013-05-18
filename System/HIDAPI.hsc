@@ -12,6 +12,7 @@ module System.HIDAPI
   , System.HIDAPI.error
   , HIDAPIException(HIDAPIException)
   , Device()
+  , DeviceInfo (..)
   ) where
 
 import Control.Applicative
