@@ -13,6 +13,12 @@ module System.HIDAPI
   , HIDAPIException(HIDAPIException)
   , Device()
   , DeviceInfo (..)
+  , DevicePath
+  , VendorID
+  , ProductID
+  , ReleaseNumber
+  , SerialNumber
+  , InterfaceNumber
   ) where
 
 import Control.Applicative
@@ -62,17 +68,25 @@ instance Storable DeviceInfoInternal where
     #{peek struct hid_device_info, interface_number} p <*>
     #{peek struct hid_device_info, next} p
 
+-- Aliases for writing better type signatures and haddocks.
+type DevicePath = String
+type VendorID = Word16
+type ProductID = Word16
+type ReleaseNumber = Word16
+type SerialNumber = String
+type InterfaceNumber = Int
+
 data DeviceInfo = DeviceInfo
-  { path :: String
-  , vendorId :: Word16
-  , productId :: Word16
-  , serialNumber :: Maybe String
-  , releaseNumber :: Word16
+  { path :: DevicePath
+  , vendorId :: VendorID
+  , productId :: ProductID
+  , serialNumber :: Maybe SerialNumber
+  , releaseNumber :: ReleaseNumber
   , manufacturerString :: Maybe String
   , productString :: Maybe String
   , usagePage :: Word16
   , usage :: Word16
-  , interfaceNumber :: Int
+  , interfaceNumber :: InterfaceNumber
   } deriving (Show)
 
 peekOptString p
@@ -152,7 +166,7 @@ parseEnumeration dip
     dis <- parseEnumeration (_next idi)
     return (di : dis)
 
-enumerate :: Maybe Word16 -> Maybe Word16 -> IO [ DeviceInfo ]
+enumerate :: Maybe VendorID -> Maybe ProductID -> IO [ DeviceInfo ]
 enumerate vendorId productId = do
   dip <- hid_enumerate (maybe 0 fromIntegral vendorId) (maybe 0 fromIntegral productId)
   if dip == nullPtr -- could be error or empty list
@@ -172,7 +186,7 @@ enumerateAll = enumerate Nothing Nothing
 foreign import ccall unsafe "hidapi/hidapi.h hid_open"
   hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
 
-open :: Word16 -> Word16 -> Maybe String -> IO Device
+open :: VendorID -> ProductID -> Maybe SerialNumber -> IO Device
 open vendorId productId serialNumber = do
   let vid = fromIntegral vendorId
   let pid = fromIntegral productId
@@ -185,7 +199,7 @@ open vendorId productId serialNumber = do
 foreign import ccall unsafe "hidapi/hidapi.h hid_open_path"
   hid_open_path :: CString -> IO (Ptr ())
 
-openPath :: String -> IO Device
+openPath :: DevicePath -> IO Device
 openPath p = do
   dp <- withCString p hid_open_path
   check (dp /= nullPtr) "Device open (by path) failed"
@@ -212,7 +226,7 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
 
 _SERIAL_NUMBER_MAX_LENGTH = 32768
 
-getSerialNumberString :: Device -> IO String
+getSerialNumberString :: Device -> IO SerialNumber
 getSerialNumberString d = do
   let bs = _SERIAL_NUMBER_MAX_LENGTH * sizeOf (undefined :: CWchar)
   bracket (mallocBytes bs) free $ \b -> do
