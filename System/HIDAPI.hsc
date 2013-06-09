@@ -107,7 +107,7 @@ fromInternalDeviceInfo di = DeviceInfo <$>
   pure (fromIntegral $ _interfaceNumber di)
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_error"
-  hid_error :: IO CWString
+  hid_error :: Hid_Device_Ptr -> IO CWString
 
 data HIDAPIException = HIDAPIException String String
   deriving (Data, Typeable)
@@ -117,9 +117,12 @@ instance Show HIDAPIException where
 
 instance Exception HIDAPIException
 
-error :: IO (Maybe String)
-error = do
-  e <- hid_error
+-- TODO As of https://github.com/signal11/hidapi/issues/123 it is unclear
+--      whether the passed in pointer may be NULL, and if hid_error ever
+--      returns something useful.
+error :: Device -> IO (Maybe String)
+error (Device devicePtr) = do
+  e <- hid_error devicePtr
   if e == nullPtr
     then return Nothing
     else do
@@ -127,10 +130,17 @@ error = do
       free e
       return (Just es)
 
-check :: Bool -> String -> IO ()
-check c m = unless c $ do
-  e <- fromMaybe "Unknown error" <$> System.HIDAPI.error
-  throwIO $ HIDAPIException m e
+check :: Bool -> String -> String -> IO ()
+check c msg reason = unless c $ throwIO $ HIDAPIException msg reason
+
+-- Device is only used to obtain a more detailed error if the condition is
+-- false and device is not a NULL pointer.
+checkWithHidError :: Bool -> Device -> String -> String -> IO ()
+checkWithHidError c dev@(Device devPtr) msg defaultReason = unless c $ do
+  reason <- if devPtr /= nullPtr
+              then fromMaybe defaultReason <$> System.HIDAPI.error dev
+              else return defaultReason
+  throwIO $ HIDAPIException msg reason
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_init"
   hid_init :: IO CInt
@@ -138,7 +148,7 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_init"
 init :: IO ()
 init = do
   r <- hid_init
-  check (r == 0) "HIDAPI initialization failed"
+  check (r == 0) "HIDAPI initialization failed" "hid_init /= 0"
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_exit"
   hid_exit :: IO CInt
@@ -146,7 +156,7 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_exit"
 exit :: IO ()
 exit = do
 	r <- hid_exit
-	check (r == 0) "HIDAPI shutdown failed"
+	check (r == 0) "HIDAPI shutdown failed" "hid_exit /= 0"
 
 withHIDAPI :: IO a -> IO a
 withHIDAPI = bracket_ System.HIDAPI.init exit
@@ -169,12 +179,10 @@ parseEnumeration dip
 enumerate :: Maybe VendorID -> Maybe ProductID -> IO [ DeviceInfo ]
 enumerate m'vendorId m'productId = do
   dip <- hid_enumerate (maybe 0 fromIntegral m'vendorId) (maybe 0 fromIntegral m'productId)
-  if dip == nullPtr -- could be error or empty list
-    then do
-      e <- System.HIDAPI.error
-      case e of
-        Nothing -> return []
-        Just err -> throwIO (HIDAPIException "Device enumeration failed" err)
+  -- Docs say hid_enumerate also returns "NULL in the case of failure", but
+  -- this is indistinguishable from "no devices". :/
+  if dip == nullPtr
+    then return []
     else do
       dis <- parseEnumeration dip
       hid_free_enumeration dip
@@ -190,20 +198,20 @@ open :: VendorID -> ProductID -> Maybe SerialNumber -> IO Device
 open vendor_id product_id serial = do
   let vid = fromIntegral vendor_id
   let pid = fromIntegral product_id
-  dp <- case serial of
+  dev@(Device dp) <- Device <$> case serial of
     Nothing -> hid_open vid pid nullPtr
     Just sn -> withCWString sn (hid_open vid pid)
-  check (dp /= nullPtr) "Device open (by vendor/product id) failed"
-  return (Device dp)
+  checkWithHidError (dp /= nullPtr) dev "Device open (by vendor/product id) failed" "hid_open returned NULL"
+  return dev
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_open_path"
   hid_open_path :: CString -> IO Hid_Device_Ptr
 
 openPath :: DevicePath -> IO Device
 openPath p = do
-  dp <- withCString p hid_open_path
-  check (dp /= nullPtr) "Device open (by path) failed"
-  return (Device dp)
+  dev@(Device dp) <- Device <$> withCString p hid_open_path
+  checkWithHidError (dp /= nullPtr) dev "Device open (by path) failed" "hid_open returned NULL"
+  return dev
 
 openDeviceInfo :: DeviceInfo -> IO Device
 openDeviceInfo
@@ -216,9 +224,9 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_read"
   hid_read :: Device -> Ptr CChar -> CSize -> IO CInt
 
 read :: Device -> Int -> IO ByteString
-read d n = allocaBytes n $ \b -> do
-  n' <- hid_read d b (fromIntegral n)
-  check (n' /= -1) "Read failed"
+read dev n = allocaBytes n $ \b -> do
+  n' <- hid_read dev b (fromIntegral n)
+  checkWithHidError (n' /= -1) dev "Read failed" "hid_read returned -1"
   packCStringLen ( b, fromIntegral n' )
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
@@ -228,9 +236,9 @@ _SERIAL_NUMBER_MAX_LENGTH :: Int
 _SERIAL_NUMBER_MAX_LENGTH = 32768
 
 getSerialNumberString :: Device -> IO SerialNumber
-getSerialNumberString d = do
+getSerialNumberString dev = do
   let bs = _SERIAL_NUMBER_MAX_LENGTH * sizeOf (undefined :: CWchar)
   bracket (mallocBytes bs) free $ \b -> do
-    n' <- hid_get_serial_number_string d b (fromIntegral _SERIAL_NUMBER_MAX_LENGTH)
-    check (n' /= -1) "Getting serial number failed"
+    n' <- hid_get_serial_number_string dev b (fromIntegral _SERIAL_NUMBER_MAX_LENGTH)
+    checkWithHidError (n' /= -1) dev "Getting serial number failed" "hid_get_serial_number_string returned -1"
     peekCWString b
