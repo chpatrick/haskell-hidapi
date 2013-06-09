@@ -32,7 +32,8 @@ import Foreign
 import Foreign.C.Types
 import Foreign.C.String
 
-newtype Device = Device (Ptr ())
+type Hid_Device_Ptr = Ptr () -- used where hid_device* is used on C side
+newtype Device = Device Hid_Device_Ptr
 
 data DeviceInfoInternal = DeviceInfoInternal
   { _path :: CString
@@ -183,7 +184,7 @@ enumerateAll :: IO [ DeviceInfo ]
 enumerateAll = enumerate Nothing Nothing
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_open"
-  hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
+  hid_open :: CUShort -> CUShort -> CWString -> IO Hid_Device_Ptr
 
 open :: VendorID -> ProductID -> Maybe SerialNumber -> IO Device
 open vendor_id product_id serial = do
@@ -196,7 +197,7 @@ open vendor_id product_id serial = do
   return (Device dp)
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_open_path"
-  hid_open_path :: CString -> IO (Ptr ())
+  hid_open_path :: CString -> IO Hid_Device_Ptr
 
 openPath :: DevicePath -> IO Device
 openPath p = do
