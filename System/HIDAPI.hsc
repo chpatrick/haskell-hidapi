@@ -31,8 +31,6 @@ import Data.Data
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String
-import Foreign.Marshal
-import Foreign.Ptr
 
 newtype Device = Device (Ptr ())
 
@@ -89,6 +87,7 @@ data DeviceInfo = DeviceInfo
   , interfaceNumber :: InterfaceNumber
   } deriving (Show)
 
+peekOptString :: Ptr CWchar -> IO (Maybe String)
 peekOptString p
   | p == nullPtr = return Nothing
   | otherwise = Just <$> peekCWString p
@@ -167,8 +166,8 @@ parseEnumeration dip
     return (di : dis)
 
 enumerate :: Maybe VendorID -> Maybe ProductID -> IO [ DeviceInfo ]
-enumerate vendorId productId = do
-  dip <- hid_enumerate (maybe 0 fromIntegral vendorId) (maybe 0 fromIntegral productId)
+enumerate m'vendorId m'productId = do
+  dip <- hid_enumerate (maybe 0 fromIntegral m'vendorId) (maybe 0 fromIntegral m'productId)
   if dip == nullPtr -- could be error or empty list
     then do
       e <- System.HIDAPI.error
@@ -187,10 +186,10 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_open"
   hid_open :: CUShort -> CUShort -> CWString -> IO (Ptr ())
 
 open :: VendorID -> ProductID -> Maybe SerialNumber -> IO Device
-open vendorId productId serialNumber = do
-  let vid = fromIntegral vendorId
-  let pid = fromIntegral productId
-  dp <- case serialNumber of
+open vendor_id product_id serial = do
+  let vid = fromIntegral vendor_id
+  let pid = fromIntegral product_id
+  dp <- case serial of
     Nothing -> hid_open vid pid nullPtr
     Just sn -> withCWString sn (hid_open vid pid)
   check (dp /= nullPtr) "Device open (by vendor/product id) failed"
@@ -224,6 +223,7 @@ read d n = allocaBytes n $ \b -> do
 foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
   hid_get_serial_number_string :: Device -> CWString -> CSize -> IO CInt
 
+_SERIAL_NUMBER_MAX_LENGTH :: Int
 _SERIAL_NUMBER_MAX_LENGTH = 32768
 
 getSerialNumberString :: Device -> IO SerialNumber
