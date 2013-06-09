@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, DeriveDataTypeable #-}
+{-# LANGUAGE ForeignFunctionInterface, DeriveDataTypeable, DeriveGeneric #-}
 
 #include "hidapi/hidapi.h"
 
@@ -22,6 +22,7 @@ module System.HIDAPI
   ) where
 
 import Control.Applicative
+import Control.DeepSeq.Generics
 import Control.Exception
 import Control.Monad
 import Data.ByteString
@@ -31,6 +32,7 @@ import Data.Data
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String
+import GHC.Generics (Generic)
 
 type Hid_Device_Ptr = Ptr () -- used where hid_device* is used on C side
 newtype Device = Device Hid_Device_Ptr
@@ -86,7 +88,9 @@ data DeviceInfo = DeviceInfo
   , usagePage :: Word16
   , usage :: Word16
   , interfaceNumber :: InterfaceNumber
-  } deriving (Show)
+  } deriving (Show, Generic)
+
+instance NFData DeviceInfo where rnf = genericRnf
 
 peekOptString :: Ptr CWchar -> IO (Maybe String)
 peekOptString p
@@ -110,12 +114,14 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_error"
   hid_error :: Hid_Device_Ptr -> IO CWString
 
 data HIDAPIException = HIDAPIException String String
-  deriving (Data, Typeable)
+  deriving (Data, Typeable, Generic)
 
 instance Show HIDAPIException where
   showsPrec _ (HIDAPIException a c) = showString a . showString ": " . showString c
 
 instance Exception HIDAPIException
+
+instance NFData HIDAPIException where rnf = genericRnf
 
 -- TODO As of https://github.com/signal11/hidapi/issues/123 it is unclear
 --      whether the passed in pointer may be NULL, and if hid_error ever
