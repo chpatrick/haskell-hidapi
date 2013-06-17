@@ -139,13 +139,10 @@ error (Device devicePtr) = do
 check :: Bool -> String -> String -> IO ()
 check c msg reason = unless c $ throwIO $ HIDAPIException msg reason
 
--- Device is only used to obtain a more detailed error if the condition is
--- false and device is not a NULL pointer.
+-- Uses the given default reason if hid_error returns NULL (Nothing).
 checkWithHidError :: Bool -> Device -> String -> String -> IO ()
 checkWithHidError c dev@(Device devPtr) msg defaultReason = unless c $ do
-  reason <- if devPtr /= nullPtr
-              then fromMaybe defaultReason <$> System.HIDAPI.error dev
-              else return defaultReason
+  reason <- fromMaybe defaultReason <$> System.HIDAPI.error dev
   throwIO $ HIDAPIException msg reason
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_init"
