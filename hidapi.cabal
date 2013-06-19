@@ -1,7 +1,13 @@
 name:              hidapi
-version:           1.0
+version:           0.1
 build-type:        Simple
 cabal-version:     >= 1.2
+author:            Patrick Chilton <chpatrick@gmail.com>, Niklas Hambüchen <mail@nh2.me>
+maintainer:        Patrick Chilton <chpatrick@gmail.com>
+homepage:          https://github.com/vahokif/haskell-hidapi
+bug-reports:       https://github.com/vahokif/haskell-hidapi/issues
+synopsis:          Haskell bindings to HIDAPI
+description:       Haskell bindings to the HIDAPI library (<http://www.signal11.us/oss/hidapi/>).
 
 library
   exposed-modules: System.HIDAPI
