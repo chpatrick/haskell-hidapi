@@ -241,9 +241,9 @@ read dev n = allocaBytes n $ \b -> do
   
 write :: Device -> ByteString -> IO Int
 write dev b = do
-	n' <- useAsCString b (\cs -> hid_write dev cs (fromIntegral . Data.ByteString.length $ b))
-	checkWithHidError(n' /= -1) dev "Write failed" "hid_write returned -1"
-	return . fromIntegral $ n'
+	n' <- useAsCStringLen b $ \(cs, csLen) -> hid_write dev cs (fromIntegral csLen)
+	checkWithHidError (n' /= -1) dev "Write failed" "hid_write returned -1"
+	return $ fromIntegral n'
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
   hid_get_serial_number_string :: Device -> CWString -> CSize -> IO CInt
