@@ -20,6 +20,6 @@ library
   exposed-modules: System.HIDAPI
   build-depends:
       base < 5
-    , bytestring >= 0.10
+    , bytestring >= 0.9.2.1
     , deepseq-generics >= 0.1
   extra-libraries: hidapi-hidraw
