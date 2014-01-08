@@ -22,4 +22,14 @@ library
       base < 5
     , bytestring >= 0.9.2.1
     , deepseq-generics >= 0.1
-  extra-libraries: hidapi-hidraw
+
+  -- hidapi is not packaged for many distributions, and seems to
+  -- expect to be included in the software that uses it, so we do that
+  include-dirs:  cbits
+  includes:      hidapi/hidapi.h
+  c-sources:     cbits/hidapi/hid.c
+
+  if os(windows)
+    extra-libraries: hid setupapi
+  else
+    extra-libraries: hidapi-hidraw
