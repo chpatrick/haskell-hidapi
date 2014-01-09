@@ -25,11 +25,12 @@ library
 
   -- hidapi is not packaged for many distributions, and seems to
   -- expect to be included in the software that uses it, so we do that
-  include-dirs:  cbits
-  includes:      hidapi/hidapi.h
-  c-sources:     cbits/hidapi/hid.c
+  include-dirs:  cbits/hidapi
+  includes:      hidapi.h
 
   if os(windows)
+    c-sources:       cbits/windows/hid.c
     extra-libraries: hid setupapi
   else
-    extra-libraries: hidapi-hidraw
+    c-sources:       cbits/linux/hid.c
+    extra-libraries: udev
