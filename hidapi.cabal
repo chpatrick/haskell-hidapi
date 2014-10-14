@@ -12,6 +12,9 @@ description:       Haskell bindings to the HIDAPI library (<http://www.signal11.
 license:           MIT
 license-file:      LICENSE
 
+extra-source-files:
+  cbits/hidapi/hidapi.h
+
 source-repository head
   type:      git
   location:  git://github.com/vahokif/haskell-hidapi.git
@@ -29,8 +32,11 @@ library
   includes:      hidapi.h
 
   if os(windows)
-    c-sources:       cbits/windows/hid.c
-    extra-libraries: hid setupapi
+    c-sources: cbits/hidapi/windows/hid.c
+    extra-libraries: setupapi
   else
-    c-sources:       cbits/linux/hid.c
-    extra-libraries: udev
+    if os(darwin)
+      c-sources: cbits/hidapi/mac/hid.c
+    else
+      c-sources: cbits/hidapi/linux/hid.c
+      extra-libraries: udev

@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, DeriveDataTypeable, DeriveGeneric #-}
 
-#include "hidapi/hidapi.h"
+#include "hidapi.h"
 
 module System.HIDAPI
   ( System.HIDAPI.init, exit, withHIDAPI
