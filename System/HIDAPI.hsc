@@ -54,6 +54,7 @@ data DeviceInfoInternal = DeviceInfoInternal
 
 #let alignment t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 
+-- | Note: This is currently a read-only instance. `poke` is not yet implemented.
 instance Storable DeviceInfoInternal where
   alignment _ = #{alignment struct hid_device_info}
   sizeOf _ = #{size struct hid_device_info}
