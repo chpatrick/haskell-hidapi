@@ -23,6 +23,7 @@ module System.HIDAPI
   ) where
 
 import Control.Applicative
+import Control.DeepSeq
 import Control.DeepSeq.Generics
 import Control.Exception
 import Control.Monad
