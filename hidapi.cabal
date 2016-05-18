@@ -9,6 +9,10 @@ homepage:          https://github.com/vahokif/haskell-hidapi
 bug-reports:       https://github.com/vahokif/haskell-hidapi/issues
 synopsis:          Haskell bindings to HIDAPI
 description:       Haskell bindings to the HIDAPI library (<http://www.signal11.us/oss/hidapi/>).
+                   .
+                   Note you need need to have the corresponding low-level
+                   library installed for your OS, e.g. libudev-dev on Debian/Ubuntu,
+                   or just udev on distributions that don't split dev libraries.
 license:           MIT
 license-file:      LICENSE
 
