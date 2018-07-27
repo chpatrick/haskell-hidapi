@@ -9,6 +9,8 @@ module System.HIDAPI
   , close
   , System.HIDAPI.read
   , System.HIDAPI.write
+  , System.HIDAPI.getFeatureReport
+  , System.HIDAPI.sendFeatureReport
   , getSerialNumberString
   , System.HIDAPI.error
   , HIDAPIException(HIDAPIException)
@@ -79,6 +81,8 @@ type ProductID = Word16
 type ReleaseNumber = Word16
 type SerialNumber = String
 type InterfaceNumber = Int
+type ReportID = Word8
+type ReportLength = Word16
 
 data DeviceInfo = DeviceInfo
   { path :: DevicePath
@@ -235,6 +239,12 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_read"
 foreign import ccall unsafe "hidapi/hidapi.h hid_write"
   hid_write :: Device -> Ptr CChar -> CSize -> IO CInt
 
+foreign import ccall unsafe "hidapi/hidapi.h hid_get_feature_report"
+  hid_get_feature_report :: Device -> Ptr CChar -> CSize -> IO CInt
+
+foreign import ccall unsafe "hidapi/hidapi.h hid_send_feature_report"
+  hid_send_feature_report :: Device -> Ptr CChar -> CSize -> IO CInt
+
 read :: Device -> Int -> IO ByteString
 read dev n = allocaBytes n $ \b -> do
   n' <- hid_read dev b (fromIntegral n)
@@ -245,6 +255,24 @@ write :: Device -> ByteString -> IO Int
 write dev b = do
   n' <- useAsCStringLen b $ \(cs, csLen) -> hid_write dev cs (fromIntegral csLen)
   checkWithHidError (n' /= -1) dev "Write failed" "hid_write returned -1"
+  return $ fromIntegral n'
+
+getFeatureReport :: Device -> ReportID -> ReportLength -> IO ByteString
+getFeatureReport dev r l =
+  allocaBytes (toSize l) $ \cs -> do
+    _ <- pokeElemOff cs 0 (fromIntegral r)
+    n <- hid_get_feature_report dev cs (toSize l)
+    let n' = fromIntegral n
+    checkWithHidError (n' /= -1) dev "Write failed" "hid_get_feature_report returned -1"
+    Data.ByteString.pack <$> peekArray n' (castPtr cs)
+  where
+    toSize x = fromIntegral x + 1
+
+sendFeatureReport :: Device -> ReportID -> ByteString -> IO Int
+sendFeatureReport dev r d = do
+  let b = cons r d
+  n' <- useAsCStringLen b $ \(cs, csLen) -> hid_send_feature_report dev cs (fromIntegral csLen)
+  checkWithHidError (n' /= -1) dev "Write failed" "hid_send_feature_report returned -1"
   return $ fromIntegral n'
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
