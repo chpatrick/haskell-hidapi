@@ -83,6 +83,7 @@ type SerialNumber = String
 type InterfaceNumber = Int
 type ReportID = Word8
 type ReportLength = Word16
+type FeatureReport = (ReportID, ByteString)
 
 data DeviceInfo = DeviceInfo
   { path :: DevicePath
@@ -257,14 +258,15 @@ write dev b = do
   checkWithHidError (n' /= -1) dev "Write failed" "hid_write returned -1"
   return $ fromIntegral n'
 
-getFeatureReport :: Device -> ReportID -> ReportLength -> IO ByteString
+getFeatureReport :: Device -> ReportID -> ReportLength -> IO FeatureReport
 getFeatureReport dev r l =
   allocaBytes (toSize l) $ \cs -> do
     _ <- pokeElemOff cs 0 (fromIntegral r)
     n <- hid_get_feature_report dev cs (toSize l)
     let n' = fromIntegral n
     checkWithHidError (n' /= -1) dev "Write failed" "hid_get_feature_report returned -1"
-    Data.ByteString.pack <$> peekArray n' (castPtr cs)
+    b <- Data.ByteString.pack <$> peekArray n' (castPtr cs)
+    return (Data.ByteString.head b, Data.ByteString.tail b)
   where
     toSize x = fromIntegral x + 1
 
