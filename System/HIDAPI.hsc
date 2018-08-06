@@ -30,6 +30,7 @@ import Control.DeepSeq.Generics
 import Control.Exception
 import Control.Monad
 import Data.ByteString
+import Data.ByteString.Internal (createAndTrim)
 import Data.Maybe
 import Data.Typeable
 import Data.Data
@@ -241,7 +242,7 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_write"
   hid_write :: Device -> Ptr CChar -> CSize -> IO CInt
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_get_feature_report"
-  hid_get_feature_report :: Device -> Ptr CChar -> CSize -> IO CInt
+  hid_get_feature_report :: Device -> Ptr Word8 -> CSize -> IO CInt
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_send_feature_report"
   hid_send_feature_report :: Device -> Ptr CChar -> CSize -> IO CInt
@@ -259,14 +260,14 @@ write dev b = do
   return $ fromIntegral n'
 
 getFeatureReport :: Device -> ReportID -> ReportLength -> IO FeatureReport
-getFeatureReport dev r l =
-  allocaBytes (toSize l) $ \cs -> do
+getFeatureReport dev r l = do
+  b <- createAndTrim (toSize l) $ \cs -> do
     _ <- pokeElemOff cs 0 (fromIntegral r)
     n <- hid_get_feature_report dev cs (toSize l)
     let n' = fromIntegral n
     checkWithHidError (n' /= -1) dev "Write failed" "hid_get_feature_report returned -1"
-    b <- Data.ByteString.pack <$> peekArray n' (castPtr cs)
-    return (Data.ByteString.head b, Data.ByteString.tail b)
+    return n'
+  return (Data.ByteString.head b, Data.ByteString.tail b)
   where
     toSize x = fromIntegral x + 1
 
