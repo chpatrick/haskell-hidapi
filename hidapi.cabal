@@ -39,6 +39,7 @@ library
   -- expect to be included in the software that uses it, so we do that
   include-dirs:  cbits/hidapi
   includes:      hidapi.h
+  ghc-options:   -Wall
 
   if os(windows)
     c-sources: cbits/hidapi/windows/hid.c
