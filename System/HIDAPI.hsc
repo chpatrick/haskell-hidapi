@@ -24,7 +24,6 @@ module System.HIDAPI
   , InterfaceNumber
   ) where
 
-import Control.Applicative
 import Control.DeepSeq
 import Control.DeepSeq.Generics
 import Control.Exception
@@ -56,13 +55,10 @@ data DeviceInfoInternal = DeviceInfoInternal
   , _next :: Ptr DeviceInfoInternal
   } deriving (Show)
 
-#let alignment t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
-
 -- | Note: This is currently a read-only instance. `poke` is not yet implemented.
-instance Storable DeviceInfoInternal where
-  alignment _ = #{alignment struct hid_device_info}
-  sizeOf _ = #{size struct hid_device_info}
-  peek p = DeviceInfoInternal <$>
+peekDeviceInfoInternal :: Ptr DeviceInfoInternal -> IO DeviceInfoInternal
+peekDeviceInfoInternal p =
+  DeviceInfoInternal <$>
     #{peek struct hid_device_info, path} p <*>
     #{peek struct hid_device_info, vendor_id} p <*>
     #{peek struct hid_device_info, product_id} p <*>
@@ -186,7 +182,7 @@ parseEnumeration :: Ptr DeviceInfoInternal -> IO [ DeviceInfo ]
 parseEnumeration dip
   | dip == nullPtr = return []
   | otherwise = do
-    idi <- peek dip
+    idi <- peekDeviceInfoInternal dip
     di <- fromInternalDeviceInfo idi
     dis <- parseEnumeration (_next idi)
     return (di : dis)
@@ -237,7 +233,7 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_close"
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_read"
   hid_read :: Device -> Ptr CChar -> CSize -> IO CInt
-  
+
 foreign import ccall unsafe "hidapi/hidapi.h hid_write"
   hid_write :: Device -> Ptr CChar -> CSize -> IO CInt
 
@@ -252,7 +248,7 @@ read dev n = allocaBytes n $ \b -> do
   n' <- hid_read dev b (fromIntegral n)
   checkWithHidError (n' /= -1) dev "Read failed" "hid_read returned -1"
   packCStringLen ( b, fromIntegral n' )
-  
+
 write :: Device -> ByteString -> IO Int
 write dev b = do
   n' <- useAsCStringLen b $ \(cs, csLen) -> hid_write dev cs (fromIntegral csLen)
@@ -287,7 +283,7 @@ _SERIAL_NUMBER_MAX_LENGTH = 32768
 getSerialNumberString :: Device -> IO SerialNumber
 getSerialNumberString dev = do
   let bs = _SERIAL_NUMBER_MAX_LENGTH * sizeOf (undefined :: CWchar)
-  bracket (mallocBytes bs) free $ \b -> do
+  allocaBytes bs $ \b -> do
     n' <- hid_get_serial_number_string dev b (fromIntegral _SERIAL_NUMBER_MAX_LENGTH)
     checkWithHidError (n' /= -1) dev "Getting serial number failed" "hid_get_serial_number_string returned -1"
     peekCWString b
