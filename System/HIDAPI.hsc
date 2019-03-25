@@ -8,6 +8,7 @@ module System.HIDAPI
   , open, openPath, openDeviceInfo
   , close
   , System.HIDAPI.read
+  , System.HIDAPI.setBlocking
   , System.HIDAPI.write
   , System.HIDAPI.getFeatureReport
   , System.HIDAPI.sendFeatureReport
@@ -242,6 +243,16 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_get_feature_report"
 
 foreign import ccall unsafe "hidapi/hidapi.h hid_send_feature_report"
   hid_send_feature_report :: Device -> Ptr CChar -> CSize -> IO CInt
+
+foreign import ccall unsafe "hidapi/hidapi.h hid_set_nonblocking"
+  hid_set_nonblocking :: Device -> CInt -> IO CInt
+
+setBlocking :: Device -- |^ USB Device to act on, see `open', `openPath' or `openDeviceInfo'
+            -> Bool   -- |^ True -> `read' blocks; False -> `read' may return immediately with 0 bytes read
+            -> IO ()
+setBlocking dev blocking = do
+  n' <- hid_set_nonblocking dev $ if blocking then 0 else 1
+  checkWithHidError (n' /= -1) dev "Unable to set blocking mode" "hid_set_nonblocking returned -1"
 
 read :: Device -> Int -> IO ByteString
 read dev n = allocaBytes n $ \b -> do
