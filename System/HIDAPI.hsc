@@ -247,8 +247,8 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_send_feature_report"
 foreign import ccall unsafe "hidapi/hidapi.h hid_set_nonblocking"
   hid_set_nonblocking :: Device -> CInt -> IO CInt
 
-setBlocking :: Device -- |^ USB Device to act on, see open, openPath or openDeviceInfo
-            -> Bool   -- |^ True -> read blocks; False -> read may return immediately with 0 bytes read
+setBlocking :: Device -- USB Device to act on, see open, openPath or openDeviceInfo
+            -> Bool   -- True -> read blocks; False -> read may return immediately with 0 bytes read
             -> IO ()
 setBlocking dev blocking = do
   n' <- hid_set_nonblocking dev $ if blocking then 0 else 1
