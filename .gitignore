@@ -1,3 +1,6 @@
 System/HIDAPI.hs
 dist/
 cabal-dev/
+.stack-work/
+*~
+stack.yaml.lock
