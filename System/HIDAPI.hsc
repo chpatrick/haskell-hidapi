@@ -8,6 +8,7 @@ module System.HIDAPI
   , open, openPath, openDeviceInfo
   , close
   , System.HIDAPI.read
+  , System.HIDAPI.readTimeout
   , System.HIDAPI.setBlocking
   , System.HIDAPI.write
   , System.HIDAPI.getFeatureReport
@@ -235,6 +236,9 @@ foreign import ccall unsafe "hidapi/hidapi.h hid_close"
 foreign import ccall unsafe "hidapi/hidapi.h hid_read"
   hid_read :: Device -> Ptr CChar -> CSize -> IO CInt
 
+foreign import ccall unsafe "hidapi/hidapi.h hid_read_timeout"
+  hid_read_timeout :: Device -> Ptr CChar -> CSize -> CInt -> IO CInt
+
 foreign import ccall unsafe "hidapi/hidapi.h hid_write"
   hid_write :: Device -> Ptr CChar -> CSize -> IO CInt
 
@@ -258,6 +262,12 @@ read :: Device -> Int -> IO ByteString
 read dev n = allocaBytes n $ \b -> do
   n' <- hid_read dev b (fromIntegral n)
   checkWithHidError (n' /= -1) dev "Read failed" "hid_read returned -1"
+  packCStringLen ( b, fromIntegral n' )
+
+readTimeout :: Device -> Int -> Int -> IO ByteString
+readTimeout dev n time = allocaBytes n $ \b -> do
+  n' <- hid_read_timeout dev b (fromIntegral n) (fromIntegral time)
+  checkWithHidError (n' /= -1) dev "Read failed" "hid_read_timeout returned -1"
   packCStringLen ( b, fromIntegral n' )
 
 write :: Device -> ByteString -> IO Int
