@@ -1,12 +1,12 @@
 name:              hidapi
-version:           0.1.5
+version:           0.1.6
 build-type:        Simple
-cabal-version:     >= 1.6
+cabal-version:     >= 1.10
 category:          Hardware
 author:            Patrick Chilton <chpatrick@gmail.com>, Niklas Hambüchen <mail@nh2.me>
 maintainer:        Patrick Chilton <chpatrick@gmail.com>
-homepage:          https://github.com/vahokif/haskell-hidapi
-bug-reports:       https://github.com/vahokif/haskell-hidapi/issues
+homepage:          https://github.com/chpatrick/haskell-hidapi
+bug-reports:       https://github.com/chpatrick/haskell-hidapi/issues
 synopsis:          Haskell bindings to HIDAPI
 description:       Haskell bindings to the HIDAPI library (<https://github.com/libusb/hidapi>).
                    .
@@ -15,13 +15,14 @@ description:       Haskell bindings to the HIDAPI library (<https://github.com/l
                    or just udev on distributions that don't split dev libraries.
 license:           MIT
 license-file:      LICENSE
+extra-source-files:  README.md
 
 extra-source-files:
   cbits/hidapi/hidapi.h
 
 source-repository head
   type:      git
-  location:  git://github.com/vahokif/haskell-hidapi.git
+  location:  git://github.com/chpatrick/haskell-hidapi.git
 
 library
   exposed-modules: System.HIDAPI
@@ -50,3 +51,4 @@ library
     else
       c-sources: cbits/hidapi/linux/hid.c
       extra-libraries: udev
+  default-language:  Haskell2010
