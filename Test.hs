@@ -1,6 +1,6 @@
 -- Open and dump the first HID device. Should print deltas (?) for a USB mouse.
 -- You need root or a udev rule for your device.
--- https://github.com/signal11/hidapi/blob/master/udev/99-hid.rules
+-- https://github.com/libusb/hidapi/blob/master/udev/99-hid.rules
 -- This seems to claim the device until it is unplugged.
 
 import Control.Monad.Error

@@ -8,7 +8,7 @@ maintainer:        Patrick Chilton <chpatrick@gmail.com>
 homepage:          https://github.com/vahokif/haskell-hidapi
 bug-reports:       https://github.com/vahokif/haskell-hidapi/issues
 synopsis:          Haskell bindings to HIDAPI
-description:       Haskell bindings to the HIDAPI library (<http://www.signal11.us/oss/hidapi/>).
+description:       Haskell bindings to the HIDAPI library (<https://github.com/libusb/hidapi>).
                    .
                    Note you need need to have the corresponding low-level
                    library installed for your OS, e.g. libudev-dev on Debian/Ubuntu,
