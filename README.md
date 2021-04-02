@@ -1,4 +1,4 @@
-## hidapi [![Build Status](https://travis-ci.org/chpatrick/haskell-hidapi.svg?branch=master)](https://travis-ci.org/chpatrick/haskell-hidapi)
+## hidapi [![Build Status](https://travis-ci.org/chpatrick/haskell-hidapi.svg?branch=master)](https://travis-ci.org/chpatrick/haskell-hidapi) [![Hackage](https://img.shields.io/hackage/v/hidapi.svg)](http://hackage.haskell.org/package/hidapi)
 
 Haskell FFI bindings to the HIDAPI library
 
