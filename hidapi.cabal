@@ -48,6 +48,7 @@ library
   else
     if os(darwin)
       c-sources: cbits/hidapi/mac/hid.c
+      frameworks: AppKit
     else
       c-sources: cbits/hidapi/linux/hid.c
       extra-libraries: udev
