@@ -117,7 +117,7 @@ fromInternalDeviceInfo di = DeviceInfo <$>
   pure (fromIntegral $ _usage di) <*>
   pure (fromIntegral $ _interfaceNumber di)
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_error"
+foreign import ccall safe "hidapi/hidapi.h hid_error"
   hid_error :: Hid_Device_Ptr -> IO CWString
 
 data HIDAPIException = HIDAPIException String String
@@ -155,7 +155,7 @@ checkWithHidError c dev@(Device devPtr) msg defaultReason = unless c $ do
               else return defaultReason
   throwIO $ HIDAPIException msg reason
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_init"
+foreign import ccall safe "hidapi/hidapi.h hid_init"
   hid_init :: IO CInt
 
 init :: IO ()
@@ -163,7 +163,7 @@ init = do
   r <- hid_init
   check (r == 0) "HIDAPI initialization failed" "hid_init /= 0"
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_exit"
+foreign import ccall safe "hidapi/hidapi.h hid_exit"
   hid_exit :: IO CInt
 
 exit :: IO ()
@@ -174,10 +174,10 @@ exit = do
 withHIDAPI :: IO a -> IO a
 withHIDAPI = bracket_ System.HIDAPI.init exit
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_enumerate"
+foreign import ccall safe "hidapi/hidapi.h hid_enumerate"
   hid_enumerate :: CUShort -> CUShort -> IO (Ptr DeviceInfoInternal)
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_free_enumeration"
+foreign import ccall safe "hidapi/hidapi.h hid_free_enumeration"
   hid_free_enumeration :: Ptr DeviceInfoInternal -> IO ()
 
 parseEnumeration :: Ptr DeviceInfoInternal -> IO [ DeviceInfo ]
@@ -204,7 +204,7 @@ enumerate m'vendorId m'productId = do
 enumerateAll :: IO [ DeviceInfo ]
 enumerateAll = enumerate Nothing Nothing
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_open"
+foreign import ccall safe "hidapi/hidapi.h hid_open"
   hid_open :: CUShort -> CUShort -> CWString -> IO Hid_Device_Ptr
 
 open :: VendorID -> ProductID -> Maybe SerialNumber -> IO Device
@@ -217,7 +217,7 @@ open vendor_id product_id serial = do
   checkWithHidError (dp /= nullPtr) dev "Device open (by vendor/product id) failed" "hid_open returned NULL"
   return dev
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_open_path"
+foreign import ccall safe "hidapi/hidapi.h hid_open_path"
   hid_open_path :: CString -> IO Hid_Device_Ptr
 
 openPath :: DevicePath -> IO Device
@@ -230,25 +230,25 @@ openDeviceInfo :: DeviceInfo -> IO Device
 openDeviceInfo
   = openPath . path
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_close"
+foreign import ccall safe "hidapi/hidapi.h hid_close"
   close :: Device -> IO ()
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_read"
+foreign import ccall safe "hidapi/hidapi.h hid_read"
   hid_read :: Device -> Ptr CChar -> CSize -> IO CInt
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_read_timeout"
+foreign import ccall safe "hidapi/hidapi.h hid_read_timeout"
   hid_read_timeout :: Device -> Ptr CChar -> CSize -> CInt -> IO CInt
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_write"
+foreign import ccall safe "hidapi/hidapi.h hid_write"
   hid_write :: Device -> Ptr CChar -> CSize -> IO CInt
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_get_feature_report"
+foreign import ccall safe "hidapi/hidapi.h hid_get_feature_report"
   hid_get_feature_report :: Device -> Ptr Word8 -> CSize -> IO CInt
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_send_feature_report"
+foreign import ccall safe "hidapi/hidapi.h hid_send_feature_report"
   hid_send_feature_report :: Device -> Ptr CChar -> CSize -> IO CInt
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_set_nonblocking"
+foreign import ccall safe "hidapi/hidapi.h hid_set_nonblocking"
   hid_set_nonblocking :: Device -> CInt -> IO CInt
 
 setBlocking :: Device -- USB Device to act on, see open, openPath or openDeviceInfo
@@ -295,7 +295,7 @@ sendFeatureReport dev r d = do
   checkWithHidError (n' /= -1) dev "Write failed" "hid_send_feature_report returned -1"
   return $ fromIntegral n'
 
-foreign import ccall unsafe "hidapi/hidapi.h hid_get_serial_number_string"
+foreign import ccall safe "hidapi/hidapi.h hid_get_serial_number_string"
   hid_get_serial_number_string :: Device -> CWString -> CSize -> IO CInt
 
 _SERIAL_NUMBER_MAX_LENGTH :: Int
